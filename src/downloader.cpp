@@ -1,4 +1,5 @@
 #include "../include/downloader.hpp"
+#include "tinyxml2.h"
 #include <iostream>
 
 HTTPClient::HTTPClient() {
@@ -28,6 +29,7 @@ std::string HTTPClient::get(const std::string &url) {
   CURLcode res = curl_easy_perform(curl_);
   if (res != CURLE_OK) {
     std::cerr << "CURL ERROR: " << curl_easy_strerror(res) << std::endl;
+    return "";
   }
 
   return response;
@@ -36,6 +38,48 @@ std::string HTTPClient::get(const std::string &url) {
 size_t HTTPClient::WriteCallBack(void *contents, size_t size, size_t nmeb,
                                  std::string *userp) {
   size_t actual_size = size * nmeb;
-  userp->append(static_cast<char *>(contents));
+  userp->append(static_cast<char *>(contents), actual_size);
   return actual_size;
+}
+
+XmlParser::XmlParser() {}
+std::string XmlParser::extractUrl(const std::string &url) {
+  tinyxml2::XMLDocument doc;
+  tinyxml2::XMLError result = doc.Parse(url.c_str());
+
+  if (result != tinyxml2::XML_SUCCESS) {
+    std::cerr << "XML Parse error" << doc.ErrorStr() << std::endl;
+    return "";
+  }
+
+  tinyxml2::XMLElement *root = doc.FirstChildElement("images");
+  if (!root)
+    return "";
+
+  tinyxml2::XMLElement *imageElem = root->FirstChildElement("image");
+  if (!imageElem)
+    return "";
+
+  const char *rawUrl = imageElem->FirstChildElement("url")
+                           ? imageElem->FirstChildElement("url")->GetText()
+                       : imageElem->FirstChildElement("urlBase")
+                           ? imageElem->FirstChildElement("urlBase")->GetText()
+                           : nullptr;
+
+  if (!rawUrl)
+    return "";
+  std::string absUrl = rawUrl;
+  if (!isValidUrl(absUrl)) {
+    absUrl = absoluteUrl(absUrl);
+  }
+
+  return absUrl;
+}
+
+std::string XmlParser::absoluteUrl(const std::string &url) {
+  return "https://bing.com" + url;
+}
+
+bool XmlParser::isValidUrl(const std::string &url) {
+  return url.rfind("http://", 0) == 0 || url.rfind("https://", 0) == 0;
 }
