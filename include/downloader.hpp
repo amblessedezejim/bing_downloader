@@ -26,3 +26,17 @@ private:
   std::string absoluteUrl(const std::string &relativeUrl);
   bool isValidUrl(const std::string &url);
 };
+
+class ImageDownloader {
+public:
+  ImageDownloader(const std::string &outputDir_);
+  bool downloadImage(const std::string &imageUrl,
+                     const std::string &filename = "");
+
+private:
+  std::string outputDir_;
+  std::string generateFilename(const std::string &url);
+  std::string sanitizeFilename(const std::string &filename);
+  static size_t WriteFileCallback(void *contents, size_t size, size_t nmeb,
+                                  void *userp);
+};

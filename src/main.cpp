@@ -9,6 +9,10 @@ int main(int argc, char **argv) {
   if (xml.empty())
     return EXIT_FAILURE;
   std::string url = parser.extractUrl(xml);
-  std::cout << url << std::endl;
+
+  ImageDownloader downloader("images");
+  bool res = downloader.downloadImage(url);
+  if (!res)
+    std::cerr << "Failed to download image" << std::endl;
   return EXIT_SUCCESS;
 }
