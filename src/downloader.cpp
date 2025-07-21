@@ -1,12 +1,11 @@
 #include "../include/downloader.hpp"
 #include "tinyxml2.h"
 #include <chrono>
-#include <cstdio>
-#include <curl/curl.h>
-#include <curl/easy.h>
+#include <ctime>
 #include <filesystem>
 #include <iostream>
 #include <regex>
+#include <string>
 
 HTTPClient::HTTPClient() {
   curl_ = curl_easy_init();
@@ -147,4 +146,41 @@ size_t ImageDownloader::WriteFileCallback(void *contents, size_t size,
                                           size_t nmeb, void *userp) {
   FILE *file = static_cast<FILE *>(userp);
   return fwrite(contents, size, nmeb, file);
+}
+
+BingDownloader::BingDownloader(const std::string &outputDir)
+    : outputDir_(outputDir), imageDownloader_(outputDir) {};
+
+bool BingDownloader::downloadTodaysImage() { return downloadImages(1, 0); }
+
+bool BingDownloader::downloadImages(int count, int startIndex) {
+  for (int i = startIndex; i < startIndex + count; ++i) {
+    std::string url = buildApiUrl(i, 1);
+    log("Fetching metadata: " + url);
+    std::string xml = httpClient_.get(url);
+    std::string imageUrl = xmlParser_.extractUrl(xml);
+    if (imageUrl.empty()) {
+      log("Failed to extract image URL");
+      return false;
+    }
+
+    log("Downloading: " + imageUrl);
+    if (!imageDownloader_.downloadImage(imageUrl)) {
+      log("Download failed.");
+      return false;
+    }
+  }
+  return true;
+}
+
+std::string BingDownloader::buildApiUrl(int index, int count) {
+  return "https://www.bing.com/HPImageArchive.aspx?format=xml&idx=" +
+         std::to_string(index) + "&n=" + std::to_string(count);
+}
+
+void BingDownloader::log(const std::string &message) {
+  std::time_t now = std::time(nullptr);
+  std::tm *tm = std::localtime(&now);
+  std::cout << "[" << std::put_time(tm, "%Y-%m-%d %H:%M:%S") << "] " << message
+            << std::endl;
 }

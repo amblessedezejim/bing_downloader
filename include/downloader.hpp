@@ -40,3 +40,19 @@ private:
   static size_t WriteFileCallback(void *contents, size_t size, size_t nmeb,
                                   void *userp);
 };
+
+class BingDownloader {
+public:
+  BingDownloader(const std::string &outputDir = "./images");
+  bool downloadTodaysImage();
+  bool downloadImages(int count = 1, int startIndex = 0);
+
+private:
+  std::string outputDir_;
+  HTTPClient httpClient_;
+  XmlParser xmlParser_;
+  ImageDownloader imageDownloader_;
+
+  std::string buildApiUrl(int index, int count);
+  void log(const std::string &message);
+};
